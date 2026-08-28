@@ -1,0 +1,619 @@
+/* ============================================================
+   Kursplattform — "Code-Editor" Design
+   Die Seite selbst als IDE: Titelleiste, Datei-Tabs als Navigation,
+   Zeilennummern-Gutter im Content, Formulare wie ein JSON-Schema,
+   die Danke-Seite wie eine Terminal-Ausgabe.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+:root {
+    --bg: #1E1E2A;
+    /* Editor-Hintergrund */
+    --bg-panel: #17171F;
+    /* Sidebar / Titelleiste / Statusleiste */
+    --bg-inset: #26263A;
+    /* Inputs, eingerueckte Flaechen */
+    --line: #2E2E3E;
+    /* Trennlinien, Gutter */
+    --fg: #D7DAE6;
+    /* Fließtext */
+    --comment: #6B7089;
+    /* Kommentare, Meta-Infos */
+    --accent-blue: #7AA2F7;
+    /* Keys, Links, aktiver Tab */
+    --accent-green: #9ECE6A;
+    /* Strings, Erfolg, Checked */
+    --accent-purple: #BB9AF7;
+    /* Überschriften-Keyword */
+    --accent-red: #F7768E;
+    /* Fehler, Pflichtfeld-Hinweis */
+    --accent-yellow: #E0AF68;
+    /* Zahlen, Kursnummern */
+
+    --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+    --content-width: 760px;
+    --gutter-width: 44px;
+}
+
+/* ---------------- Reset & Base ---------------- */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 15px;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Fake OS-Titelleiste über der eigentlichen Navigation */
+body::before {
+    content: "kursplattform — main.php";
+    display: block;
+    background: var(--bg-panel);
+    color: var(--comment);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-align: center;
+    padding: 7px 0;
+}
+
+a {
+    color: var(--accent-blue);
+    text-decoration: none;
+}
+
+::selection {
+    background: var(--accent-blue);
+    color: var(--bg-panel);
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+h1,
+h2,
+h3 {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--accent-purple);
+    line-height: 1.3;
+    margin: 0 0 0.7em;
+}
+
+h1 {
+    font-size: clamp(1.5rem, 3.4vw, 1.9rem);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em;
+}
+
+h1::before {
+    content: "//";
+    color: var(--comment);
+    font-weight: 400;
+}
+
+h2 {
+    font-size: 1.05rem;
+}
+
+p {
+    margin: 0 0 1em;
+    color: var(--fg);
+}
+
+/* ---------------- Layout / Editor-Rand ---------------- */
+
+main {
+    max-width: var(--content-width);
+    margin: 0 auto;
+    padding: 44px 28px 90px calc(28px + var(--gutter-width));
+    position: relative;
+    min-height: 55vh;
+}
+
+/* vertikale Gutter-Linie, wie der Rand neben Zeilennummern im Editor */
+main::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--gutter-width);
+    width: 1px;
+    background: var(--line);
+}
+
+main>* {
+    margin-bottom: 1.1em;
+}
+
+@media (max-width: 640px) {
+    :root {
+        --gutter-width: 26px;
+    }
+
+    main {
+        padding: 36px 18px 72px calc(18px + var(--gutter-width));
+    }
+
+    body::before {
+        font-size: 0.62rem;
+    }
+}
+
+/* ---------------- Navigation (Datei-Tabs) ---------------- */
+
+nav {
+    display: flex;
+    align-items: center;
+    max-width: var(--content-width);
+    margin: 0 auto;
+    padding: 14px 28px 0;
+    border-bottom: 1px solid var(--line);
+    gap: 0;
+}
+
+nav .logo {
+    display: flex;
+    align-items: center;
+    margin-right: 28px;
+}
+
+/* macOS-artige Fensterpunkte vor dem Logo */
+nav .logo::before {
+    content: "";
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent-red);
+    box-shadow: 16px 0 var(--accent-yellow), 32px 0 var(--accent-green);
+    margin-right: 44px;
+}
+
+nav .logo a {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--fg);
+}
+
+nav .logo a::before {
+    content: "~/";
+    color: var(--comment);
+    font-weight: 400;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    margin: 0;
+    padding: 0;
+    font-size: 0.82rem;
+}
+
+nav ul li a {
+    display: inline-block;
+    color: var(--comment);
+    background: var(--bg-panel);
+    padding: 9px 18px 8px;
+    border-top: 2px solid transparent;
+    border-right: 1px solid var(--line);
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+nav ul li:first-child a {
+    border-left: 1px solid var(--line);
+}
+
+nav ul li a::after {
+    content: ".php";
+    color: var(--comment);
+    opacity: 0.6;
+}
+
+nav ul li a:hover {
+    color: var(--fg);
+    background: var(--bg-inset);
+}
+
+nav ul li a.active {
+    color: var(--accent-blue);
+    background: var(--bg);
+    border-top-color: var(--accent-blue);
+}
+
+/* ---------------- Footer (Statusleiste) ---------------- */
+
+footer {
+    background: var(--bg-panel);
+    color: var(--comment);
+    font-size: 0.72rem;
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.02em;
+}
+
+footer::before {
+    content: "⎇ main   ·   UTF-8   ·   LF   ·   PHP";
+    margin-right: auto;
+    padding-right: 20px;
+}
+
+footer p,
+footer {
+    margin: 0;
+}
+
+/* ---------------- Kurse (als Array von Objekten) ---------------- */
+
+main ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: kurs;
+}
+
+main ul li {
+    counter-increment: kurs;
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    font-size: 0.92rem;
+}
+
+main ul li::before {
+    content: "kurse[" counter(kurs, decimal) "] = {";
+    display: block;
+    color: var(--accent-blue);
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+main ul li::after {
+    content: "}";
+    display: block;
+    color: var(--accent-blue);
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+main ul li h2 {
+    font-size: 0.92rem;
+    color: var(--fg);
+    margin: 0 0 0.4em 1.4em;
+    font-weight: 400;
+}
+
+main ul li h2::before {
+    content: "titel: ";
+    color: var(--accent-yellow);
+}
+
+main ul li h2::after {
+    content: ",";
+    color: var(--fg);
+}
+
+main ul li p {
+    margin: 0 0 0 1.4em;
+    color: var(--accent-green);
+}
+
+main ul li p::before {
+    content: "beschreibung: ";
+    color: var(--accent-yellow);
+}
+
+main ul li p::after {
+    content: ",";
+    color: var(--accent-green);
+}
+
+/* ---------------- Formular (Anmeldung) ---------------- */
+
+form {
+    margin-top: 4px;
+}
+
+form pre {
+    display: block;
+    white-space: normal;
+    font-family: inherit;
+    margin: 0;
+    padding: 20px 22px;
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+}
+
+form pre>br {
+    display: none;
+}
+
+/* Standard-Feldlabel → als JSON-Key */
+form label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--comment);
+    margin: 1.5em 0 0.5em;
+}
+
+form label:first-child {
+    margin-top: 0;
+}
+
+form label:has(+ input[type="text"])::before,
+form label:has(+ input[type="email"])::before,
+form label:has(+ select)::before,
+form label:has(+ textarea)::before,
+form label:has(+ br + input[type="date"])::before,
+form label:has(+ br + textarea)::before {
+    content: '"';
+    color: var(--comment);
+}
+
+form label:has(+ input[type="text"])::after,
+form label:has(+ input[type="email"])::after,
+form label:has(+ select)::after,
+form label:has(+ textarea)::after,
+form label:has(+ br + input[type="date"])::after,
+form label:has(+ br + textarea)::after {
+    content: '":';
+    color: var(--comment);
+}
+
+form span {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--comment);
+    margin: 1.6em 0 0.7em;
+}
+
+form span::before {
+    content: "// ";
+}
+
+form span+br+label,
+form span+label {
+    margin-top: 0.5em;
+}
+
+form input[type="text"],
+form input[type="email"],
+form input[type="date"],
+form select,
+form textarea {
+    display: block;
+    width: 100%;
+    max-width: 440px;
+    font-family: var(--font-mono);
+    font-size: 0.92rem;
+    color: var(--accent-green);
+    background: var(--bg-inset);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 9px 12px;
+    caret-color: var(--accent-blue);
+    transition: border-color 0.15s ease;
+}
+
+form input[type="text"]:hover,
+form input[type="email"]:hover,
+form input[type="date"]:hover,
+form select:hover,
+form textarea:hover {
+    border-color: var(--comment);
+}
+
+form input[type="text"]:focus,
+form input[type="email"]:focus,
+form input[type="date"]:focus,
+form select:focus,
+form textarea:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+form textarea {
+    resize: vertical;
+    min-height: 84px;
+}
+
+form select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--comment) 50%),
+        linear-gradient(135deg, var(--comment) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 16px, calc(100% - 8px) 16px;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+    padding-right: 28px;
+}
+
+/* Radios & Checkboxes */
+
+form input[type="radio"],
+form input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid var(--comment);
+    background: var(--bg-inset);
+    margin: 0 8px 0 0;
+    vertical-align: -2px;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+form input[type="radio"] {
+    border-radius: 50%;
+}
+
+form input[type="checkbox"] {
+    border-radius: 3px;
+}
+
+form input[type="radio"]:checked,
+form input[type="checkbox"]:checked {
+    border-color: var(--accent-green);
+}
+
+form input[type="radio"]:checked::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--accent-green);
+}
+
+form input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: -1px;
+    width: 4px;
+    height: 8px;
+    border: solid var(--accent-green);
+    border-width: 0 2px 2px 0;
+    transform: rotate(40deg);
+}
+
+/* "Interessen": <label> umschließt Checkbox + Text */
+form label:has(input[type="checkbox"]) {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--fg);
+    margin: 0.3em 1.2em 0.3em 0;
+}
+
+/* "Teilnahme" (radio) & "Datenschutz" (checkbox): Label steht vor dem Input */
+form label:has(+ input[name="teilnahme"]),
+form label:has(+ input[name="datenschutz"]) {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--fg);
+    margin: 0.5em 20px 0.5em 0;
+}
+
+form input[name="teilnahme"],
+form input[name="datenschutz"] {
+    margin-right: 20px;
+}
+
+form label:has(+ input[name="datenschutz"]) {
+    margin-top: 1.5em;
+}
+
+button[type="submit"] {
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--bg);
+    background: var(--accent-green);
+    border: none;
+    border-radius: 4px;
+    padding: 12px 26px;
+    margin-top: 1.8em;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+button[type="submit"]::before {
+    content: "$ ";
+    opacity: 0.6;
+}
+
+button[type="submit"]:hover {
+    background: var(--accent-blue);
+}
+
+button[type="submit"]:active {
+    transform: translateY(1px);
+}
+
+/* Fehler-Box (der {{ $errors }}-Block: ein <pre> direkt vor dem <form>) */
+
+h1+pre {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent-red);
+    background: rgba(247, 118, 142, 0.08);
+    border: 1px solid var(--accent-red);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 0 0 1.6em;
+    white-space: pre-wrap;
+}
+
+h1+pre::before {
+    content: "✕ ERROR";
+    display: block;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+/* ---------------- Danke-Seite (Terminal-Ausgabe) ---------------- */
+
+main>p {
+    font-size: 0.9rem;
+    color: var(--fg);
+    padding-left: 1.2em;
+}
+
+main>p::before {
+    content: "\003E";
+    color: var(--accent-green);
+    margin-right: 0.6em;
+}
+
+main>p:last-of-type {
+    margin-top: 1.4em;
+    padding: 10px 14px;
+    background: rgba(158, 206, 106, 0.08);
+    border: 1px solid var(--accent-green);
+    border-radius: 4px;
+    color: var(--accent-green);
+}
+
+main>p:last-of-type::before {
+    content: "\2713";
+}
